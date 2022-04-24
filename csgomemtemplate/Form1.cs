@@ -9,6 +9,7 @@ namespace exmenu
 {
     public partial class Form1 : Form
     {
+        // import windows functions
         [DllImport("user32.dll")]
         static extern short GetAsyncKeyState(Keys vKeys);
 
@@ -20,6 +21,23 @@ namespace exmenu
         public Form1()
         {
             InitializeComponent();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            swed.GetProcess("csgo"); // init 
+            client = swed.GetModuleBase("client.dll");
+            engine = swed.GetModuleBase("engine.dll");
+
+            this.comboBox1.DataSource = Enum.GetValues(typeof(IDS.AllWeaponsIDs)); // populate with weapon ids
+            this.comboBox2.DataSource = Enum.GetValues(typeof(IDS.AllSkinIDs)); // populate with skin ids
+
+            // run loops in seperate threads
+            Thread skinchangerThread = new Thread(skinchanger) { IsBackground = true };
+            skinchangerThread.Start();
+
+            Thread bhopThread = new Thread(bhop) { IsBackground = true };
+            bhopThread.Start();
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -42,23 +60,6 @@ namespace exmenu
 
             saved.Add(newSkin);
 
-        }
-
-        private void Form1_Load(object sender, EventArgs e)
-        {
-            swed.GetProcess("csgo"); // init 
-            client = swed.GetModuleBase("client.dll");
-            engine = swed.GetModuleBase("engine.dll");
-
-            this.comboBox1.DataSource = Enum.GetValues(typeof(IDS.AllWeaponsIDs)); // populate with weapon ids
-            this.comboBox2.DataSource = Enum.GetValues(typeof(IDS.AllSkinIDs)); // populate with skin ids
-
-            // run loops in seperate threads
-            Thread skinchangerThread = new Thread(skinchanger) { IsBackground = true };
-            skinchangerThread.Start();
-
-            Thread bhopThread = new Thread(bhop) { IsBackground = true };
-            bhopThread.Start();
         }
 
         void skinchanger()

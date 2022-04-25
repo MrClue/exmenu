@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace skinchanger
+﻿namespace itemIDs
 {
-    public class IDS
+    public class IDs
     {
 
-        public class saved
+        public class Saved
         {
             public int weaponid, skinid;
             public float wear;

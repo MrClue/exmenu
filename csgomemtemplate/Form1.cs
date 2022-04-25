@@ -1,8 +1,6 @@
 using hazedumper;
-using swed32;
-using System.Diagnostics;
-using System.Threading;
-using skinchanger;
+using memory32;
+using itemIDs;
 using System.Runtime.InteropServices;
 
 namespace exmenu
@@ -13,9 +11,9 @@ namespace exmenu
         [DllImport("user32.dll")]
         static extern short GetAsyncKeyState(Keys vKeys);
 
-        List<IDS.saved> saved = new List<IDS.saved>(); // list to store skins
+        List<IDs.Saved> saved = new(); // list to store skins
 
-        swed swed = new swed();
+        Memory mem = new();
         IntPtr client, engine;
 
         public Form1()
@@ -25,12 +23,12 @@ namespace exmenu
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            swed.GetProcess("csgo"); // init 
-            client = swed.GetModuleBase("client.dll");
-            engine = swed.GetModuleBase("engine.dll");
+            mem.GetProcess("csgo"); // init 
+            client = mem.GetModuleBase("client.dll");
+            engine = mem.GetModuleBase("engine.dll");
 
-            this.comboBox1.DataSource = Enum.GetValues(typeof(IDS.AllWeaponsIDs)); // populate with weapon ids
-            this.comboBox2.DataSource = Enum.GetValues(typeof(IDS.AllSkinIDs)); // populate with skin ids
+            this.comboBox1.DataSource = Enum.GetValues(typeof(IDs.AllWeaponsIDs)); // populate with weapon ids
+            this.comboBox2.DataSource = Enum.GetValues(typeof(IDs.AllSkinIDs)); // populate with skin ids
 
             // run loops in seperate threads
             Thread skinchangerThread = new Thread(skinchanger) { IsBackground = true };
@@ -38,14 +36,15 @@ namespace exmenu
 
             Thread bhopThread = new Thread(bhop) { IsBackground = true };
             bhopThread.Start();
+          
         }
 
         private void button1_Click(object sender, EventArgs e)
         {
-            var selectedWeaponId = (IDS.AllWeaponsIDs)comboBox1.SelectedValue;
-            var selectedSkinId = (IDS.AllSkinIDs)comboBox2.SelectedValue;
+            var selectedWeaponId = (IDs.AllWeaponsIDs)comboBox1.SelectedValue;
+            var selectedSkinId = (IDs.AllSkinIDs)comboBox2.SelectedValue;
 
-            var newSkin = new IDS.saved
+            var newSkin = new IDs.Saved
             {
                 weaponid = (int)selectedWeaponId,
                 skinid = (int)selectedSkinId,
@@ -66,16 +65,16 @@ namespace exmenu
         {
             while(true)
             {
-                var localPlayer = swed.ReadPointer(client, signatures.dwLocalPlayer);
+                var localPlayer = mem.ReadPointer(client, signatures.dwLocalPlayer);
 
                 // loop weapon slots
                 for (int i = 0; i < 3; i++)
                 {
-                    var currentWeapon = BitConverter.ToUInt32(swed.ReadBytes(localPlayer, netvars.m_hMyWeapons + i * 0x4, 4), 0) & 0xfff;
+                    var currentWeapon = BitConverter.ToUInt32(mem.ReadBytes(localPlayer, netvars.m_hMyWeapons + i * 0x4, 4), 0) & 0xfff;
 
-                    var weaponPointer = swed.ReadPointer(client, (int)(signatures.dwEntityList + (currentWeapon - 1) * 0x10)); // explicit cast to (int)
+                    var weaponPointer = mem.ReadPointer(client, (int)(signatures.dwEntityList + (currentWeapon - 1) * 0x10)); // explicit cast to (int)
 
-                    var weaponId = BitConverter.ToInt16(swed.ReadBytes(weaponPointer, netvars.m_iItemDefinitionIndex, 2), 0);
+                    var weaponId = BitConverter.ToInt16(mem.ReadBytes(weaponPointer, netvars.m_iItemDefinitionIndex, 2), 0);
 
                     // get and apply skin
                     var setting = getSkin(weaponId);
@@ -89,25 +88,25 @@ namespace exmenu
             }
         }
 
-        void applySkin(IntPtr entPointer, IDS.saved skinSetting)
+        void applySkin(IntPtr entPointer, IDs.Saved skinSetting)
         {
             // get current skin id
-            var currentSkin = BitConverter.ToInt32(swed.ReadBytes(entPointer, netvars.m_nFallbackPaintKit, 4), 0);
+            var currentSkin = BitConverter.ToInt32(mem.ReadBytes(entPointer, netvars.m_nFallbackPaintKit, 4), 0);
 
             // if we dont already have desired skin
             if (currentSkin != skinSetting.skinid)
             {
                
-                swed.WriteBytes(entPointer, netvars.m_iItemIDHigh, BitConverter.GetBytes(-1)); // force game to use new IDs
-                swed.WriteBytes(entPointer, netvars.m_nFallbackPaintKit, BitConverter.GetBytes(skinSetting.skinid)); //apply desired skin
-                swed.WriteBytes(entPointer, netvars.m_flFallbackWear, BitConverter.GetBytes(skinSetting.wear)); // skin wear float
+                mem.WriteBytes(entPointer, netvars.m_iItemIDHigh, BitConverter.GetBytes(-1)); // force game to use new IDs
+                mem.WriteBytes(entPointer, netvars.m_nFallbackPaintKit, BitConverter.GetBytes(skinSetting.skinid)); //apply desired skin
+                mem.WriteBytes(entPointer, netvars.m_flFallbackWear, BitConverter.GetBytes(skinSetting.wear)); // skin wear float
 
-                var clientState = swed.ReadPointer(engine, signatures.dwClientState);
-                swed.WriteBytes(clientState, 0x174, BitConverter.GetBytes(-1)); // force update
+                var clientState = mem.ReadPointer(engine, signatures.dwClientState);
+                mem.WriteBytes(clientState, 0x174, BitConverter.GetBytes(-1)); // force update
             }
         }
 
-        IDS.saved? getSkin(int currentId)
+        IDs.Saved? getSkin(int currentId)
         {
             foreach(var skin in saved)
             {
@@ -117,31 +116,37 @@ namespace exmenu
 
             return null;
         }
-        
+
         void bhop()
         {
             while (true)
             {
-                if (GetAsyncKeyState(Keys.Space) < 0)
+                if (GetAsyncKeyState(Keys.Space) < 0 && checkBox1.Checked)
                 {
-                    var buffer = swed.ReadPointer(client, signatures.dwLocalPlayer);
+                    var buffer = mem.ReadPointer(client, signatures.dwLocalPlayer);
 
-                    // bytes: 4 is standard, 5 is +jump
-                    // flag: 257 = standing, 263 = crouched, 261 = begin 
+                    // bytes: 4 is "-jump", 5 is "+jump"
+                    // flag: 257 = standing, 263 = crouched, 261 = begin crouching
 
-                    var flag = BitConverter.ToInt32(swed.ReadBytes(buffer, netvars.m_fFlags, 4), 0);
-
+                    var flag = BitConverter.ToInt32(mem.ReadBytes(buffer, netvars.m_fFlags, 4), 0);
+                   
                     if (flag == 257 || flag == 263 || flag == 261)
                     {
-                        swed.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(5));
+                        mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(5));
+                    }
+                    else if (flag == 256) // maybe resetting in air will help?
+                    {
+                        mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(4));
+                        mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(5));
+                        mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(4));
                     }
                     else
                     {
-                        swed.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(4));
+                        mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(4));
                     }
                 }
 
-                Thread.Sleep(2);
+                Thread.Sleep(10); // tested: "1 - 10" = misser, "20" = misser MEGET
             }
         }
 

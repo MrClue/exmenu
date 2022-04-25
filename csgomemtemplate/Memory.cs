@@ -1,10 +1,9 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace swed32
+namespace memory32
 {
-    public class swed
+    public class Memory
     {
 
         #region imports
@@ -19,6 +18,7 @@ namespace swed32
 
         #region procstuff
         public Process proc;
+        
         public Process GetProcess(string procname)
         {
             proc = Process.GetProcessesByName(procname)[0];
@@ -26,14 +26,25 @@ namespace swed32
         }
         public IntPtr GetModuleBase(string modulename)
         {
-            if (modulename.Contains(".exe"))
+            if (proc != null && proc.MainModule != null) // maybe fix
+            {
+                if (modulename.Contains(".exe"))
+                    return proc.MainModule.BaseAddress;
+
+                foreach (ProcessModule module in proc.Modules)
+                {
+                    if (module.ModuleName == modulename)
+                        return module.BaseAddress;
+                }
+            }
+            /*if (modulename.Contains(".exe"))
                 return proc.MainModule.BaseAddress;
 
             foreach (ProcessModule module in proc.Modules)
             {
                 if (module.ModuleName == modulename)
                     return module.BaseAddress;
-            }
+            }*/
             return IntPtr.Zero;
         }
         #endregion

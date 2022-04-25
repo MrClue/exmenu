@@ -1,7 +1,6 @@
-﻿using System;
-
-// credits: https://github.com/frk1/hazedumper/blob/master/csgo.cs
+﻿// credits: https://github.com/frk1/hazedumper/blob/master/csgo.cs
 // 2022-03-30 07:36:55.834374 UTC
+// class burde være med stort, men magter ikke da det er nemmere at copy-paste fra hazedumper :)
 
 namespace hazedumper
 {

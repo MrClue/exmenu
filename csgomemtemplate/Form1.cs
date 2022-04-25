@@ -2,6 +2,7 @@ using hazedumper;
 using memory32;
 using itemIDs;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace exmenu
 {
@@ -38,7 +39,7 @@ namespace exmenu
             bhopThread.Start();
           
         }
-
+        
         private void button1_Click(object sender, EventArgs e)
         {
             var selectedWeaponId = (IDs.AllWeaponsIDs)comboBox1.SelectedValue;
@@ -121,32 +122,36 @@ namespace exmenu
         {
             while (true)
             {
-                if (GetAsyncKeyState(Keys.Space) < 0 && checkBox1.Checked)
-                {
-                    var buffer = mem.ReadPointer(client, signatures.dwLocalPlayer);
+                int space_pressed = 0; // increments when holding spacebar
 
+                while (GetAsyncKeyState(Keys.Space) < 0 && checkBox1.Checked) // changed from "if" to "while"
+                {
                     // bytes: 4 is "-jump", 5 is "+jump"
                     // flag: 257 = standing, 263 = crouched, 261 = begin crouching
-
+                    
+                    var buffer = mem.ReadPointer(client, signatures.dwLocalPlayer);
                     var flag = BitConverter.ToInt32(mem.ReadBytes(buffer, netvars.m_fFlags, 4), 0);
-                   
-                    if (flag == 257 || flag == 263 || flag == 261)
+
+                    if (flag == 257 || flag == 263 || flag == 261) // on ground + skip first space-press
                     {
-                        mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(5));
-                    }
-                    else if (flag == 256) // maybe resetting in air will help?
-                    {
-                        mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(4));
-                        mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(5));
-                        mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(4));
-                    }
-                    else
+                        if (space_pressed > 0) // must be here, or the else-statement wont be executed
+                        {
+                            mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(5));
+                        }
+                    } 
+                    else // we are in air (increment counter & reset "-jump")
                     {
                         mem.WriteBytes(client, signatures.dwForceJump, BitConverter.GetBytes(4));
+                        space_pressed++;
                     }
+
+                    // Debugging purposes:
+                    // "space_pressed" increments way too fast!
+                    // if we can make it increment only 1 time we can implement max amount of bhops etc...
+                    Debug.WriteLine(space_pressed);
                 }
 
-                Thread.Sleep(10); // tested: "1 - 10" = misser, "20" = misser MEGET
+                Thread.Sleep(1000); // doesnt seem like it does much after changing line 127 from "if" to "while"
             }
         }
 

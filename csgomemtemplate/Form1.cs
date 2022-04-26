@@ -64,7 +64,8 @@ namespace exmenu
 
         void skinchanger()
         {
-            while(true)
+            //Task.Delay(10000);
+            while (true)
             {
                 var localPlayer = mem.ReadPointer(client, signatures.dwLocalPlayer);
 
@@ -82,10 +83,8 @@ namespace exmenu
 
                     if (setting != null)
                         applySkin(weaponPointer, setting);
-
                 }
-
-                Thread.Sleep(2);
+                //Thread.Sleep(1);
             }
         }
 
@@ -148,10 +147,10 @@ namespace exmenu
                     // Debugging purposes:
                     // "space_pressed" increments way too fast!
                     // if we can make it increment only 1 time we can implement max amount of bhops etc...
-                    Debug.WriteLine(space_pressed);
+                    //Debug.WriteLine(space_pressed);
                 }
-
-                Thread.Sleep(1000); // doesnt seem like it does much after changing line 127 from "if" to "while"
+       
+                //Thread.Sleep(1000); // doesnt seem like it does much after changing line 127 from "if" to "while"
             }
         }
 

@@ -121,9 +121,12 @@ namespace exmenu
         {
             while (true)
             {
+                if (!checkBox1.Checked) // if checkbox is unchecked
+                    continue; // jump out of loop
+
                 int space_pressed = 0; // increments when holding spacebar
 
-                while (GetAsyncKeyState(Keys.Space) < 0 && checkBox1.Checked) // changed from "if" to "while"
+                while (GetAsyncKeyState(Keys.Space) < 0) // changed from "if" to "while"
                 {
                     // bytes: 4 is "-jump", 5 is "+jump"
                     // flag: 257 = standing, 263 = crouched, 261 = begin crouching
@@ -149,8 +152,7 @@ namespace exmenu
                     // if we can make it increment only 1 time we can implement max amount of bhops etc...
                     //Debug.WriteLine(space_pressed);
                 }
-       
-                //Thread.Sleep(1000); // doesnt seem like it does much after changing line 127 from "if" to "while"
+                //Thread.Sleep(1); // doesnt seem like it does much after changing line 127 from "if" to "while"
             }
         }
 
